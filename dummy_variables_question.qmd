@@ -1,0 +1,117 @@
+---
+title: "Question on Dummy Variables"
+format: html
+editor: visual
+---
+
+## The question
+
+The question was whether modeling binary data using two distinct variables instead of a single variable with values of zero and one would produce different coefficients or a different model fit.
+
+## Loading and preparing data
+
+Data comes from the VDem Project Version 12^[Coppedge, Michael, John Gerring, Carl Henrik Knutsen, Staffan I. Lindberg, Jan Teorell,
+Nazifa Alizada, David Altman, Michael Bernhard, Agnes Cornell, M. Steven Fish, Lisa
+Gastaldi, Haakon Gjerløw, Adam Glynn, Sandra Grahn, Allen Hicken, Garry Hindle, Nina
+Ilchenko, Katrin Kinzelbach, Joshua Krusell, Kyle L. Marquardt, Kelly McMann, Valeriya
+Mechkova, Juraj Medzihorsky, Pamela Paxton, Daniel Pemstein, Josefine Pernes, Oskar
+Rydén, Johannes von Römer, Brigitte Seim, Rachel Sigman, Svend-Erik Skaaning, Jeffrey
+Staton, Aksel Sundström, Eitan Tzelgov, Yi-ting Wang, Tore Wig, Steven Wilson and Daniel
+Ziblatt. 2022. "V-Dem [Country-Year/Country-Date] Dataset v12" Varieties of Democracy
+(V-Dem) Project. https://doi.org/10.23696/vdemds22.
+].
+
+I use only data with no NAs for all variables, using identical data for both models. (This might be problematic for inference, but our purpose here is only to compare the outcome of two identical datasets.)
+
+```{r}
+library(here)
+library(readr)
+
+data1 <- read_csv(here("data","vdem_plus_w.csv"))
+head(data1)
+
+summary(data1$v2x_regime)
+
+summary(data1$e_gdppc)
+
+summary(data1$v2clprptym)
+
+summary(data1$v2clprpty2)
+
+myvars <- c("year","COWcode","country_name","v2x_regime","e_gdppc","v2clprptym","v2clprptyw")
+
+new_data <- data1[myvars]
+
+new_data <- new_data[complete.cases(new_data),]
+head(new_data)
+
+```
+## Create variables for democracy and nondemocracy
+
+I create a variable for *democracy* where 0 equals nondemocracy and 1 equals democracy.
+
+I create a second variable, *nondemocracy*, where 0 equals democracy and 1 equals nondemocracy.
+
+I then show summary values for each. Note that the value of the means sums to 1. 
+
+
+```{r}
+
+# This is using the VDem data for the category equal to liberal democracies as a 1
+
+new_data$democracy <- ifelse(new_data$v2x_regime == 3, 1, 0)
+
+# This sets everything not a democracy as a 0
+
+new_data$nondemocracy <- 1 - new_data$democracy
+
+summary(new_data$democracy)
+summary(new_data$nondemocracy)
+
+
+```
+
+## First model
+
+In all three models, I use a simple linear model for demonstration purposes^[This model is likely not the best model for inference or prediction, but suffices to show the effect of the different methods of treating the binary variable.].  I use values from VDem for property rights for men (v2clprptym) and property rights for women (v2clprptyw) plus the democracy variable(s) as explanatory variables. I use Gross Domestic Product per capita as a dependent variable. 
+
+In the first model, I use the commonly used econometric technique, using only one variable to represent the two categories. I use *democracy* with value of 1 for democracy. Nondemocracy is then the omitted reference category. 
+
+```{r}
+
+model1 <- lm(e_gdppc ~ v2clprptym + v2clprptyw + democracy, data = new_data)
+summary(model1)
+
+
+```
+
+## Second model
+
+In the second model, I include the second variable *nondemocracy*.
+
+```{r}
+
+model2 <- lm(e_gdppc ~ v2clprptym + v2clprptyw + democracy + nondemocracy, data = new_data)
+summary(model2)
+
+```
+
+## Model 3 
+
+In this third model, I leave democracy coded with values of 0 for nondemocracy and 1 for democracy. I create a new variable *nondemocracy2* with a value equal to 1 for democracy and 2 for nondemocracy. 
+
+Using democracy as 0/1 and nondemocracy as 1/2
+
+```{r}
+
+new_data$nondemocracy2 <- new_data$nondemocracy + 1
+summary(new_data$nondemocracy2)
+
+model3 <- lm(e_gdppc ~ v2clprptym + v2clprptyw + democracy + nondemocracy2, data = new_data)
+summary(model3)
+
+
+```
+
+
+
